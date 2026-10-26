@@ -1,0 +1,227 @@
+================================================================================
+     ESP32-C3 & ESP32-S3 WI-FI, HOTSPOT (SOFTAP) VE CAPTIVE PORTAL KILAVUZU
+                   (ALTIN STANDART REFERANS DOKÜMANI - 2026)
+================================================================================
+
+Bu doküman; ESP32-C3 (SuperMini / DevModule) ve ESP32-S3 (Waveshare 6CH Relay vb.)
+kartlarla sıfırdan yeni bir IoT projesi geliştirirken Wi-Fi bağlantısı, Hotspot
+(Access Point) yayını, Captive Portal yönlendirmesi, USB Seri Port kilitlenmesi
+ve RGB LED durum bildirimlerinde yaşanan kronik sorunları bir daha yaşamamak için
+hazırlanmış kesin referans rehberidir.
+
+--------------------------------------------------------------------------------
+1. DONANIM FARKLARI VE TEMEL KURALLAR (ESP32-C3 vs ESP32-S3)
+--------------------------------------------------------------------------------
+
+A) ESP32-C3 (Özellikle SuperMini ve Kompakt C3 Kartları):
+   - İşlemci        : Tek Çekirdek (Single-Core) RISC-V @ 160MHz
+   - BOOT Butonu    : GPIO 9 (INPUT_PULLUP olarak kullanılır)
+   - Kronik Sorun   : Minik seramik anten + zayıf LDO (3.3V regülatör) tasarımı.
+   - KURAL 1 (HAYATİ): Varsayılan Wi-Fi anten gücü (19.5 dBm) kullanıldığında
+     kart kendi anteninde RF yansıması (gürültü) yapar ve anlık 400mA akım çekerek
+     voltaj çökmesine (brownout) uğrar. Sonuç: Ne modeme bağlanabilir ne de
+     açtığı Hotspot (AP) yayınına telefon/PC bağlanabilir (bağlantıyı reddeder
+     veya AP yayınını kendi kendine kapatır).
+   - KESİN ÇÖZÜM    : Wi-Fi başlatıldıktan (`WiFi.mode(...)`) hemen sonra
+     mutlaka anten gücü 8.5 dBm seviyesine çekilmelidir:
+     >>> WiFi.setTxPower(WIFI_POWER_8_5dBm); <<<
+
+B) ESP32-S3 (Örn: Waveshare ESP32-S3-Relay-6CH):
+   - İşlemci        : Çift Çekirdek (Dual-Core) Xtensa LX7 @ 240MHz
+   - BOOT Butonu    : GPIO 0 (INPUT_PULLUP olarak kullanılır)
+   - RGB LED Pini   : GPIO 38 (Dahili WS2812B)
+   - Buzzer Pini    : GPIO 21
+   - Röle Pinleri   : GPIO 1, 2, 41, 42, 45, 46
+   - Wi-Fi Gücü     : Endüstriyel güç regülatörü ve PCB anten yapısı güçlü olduğu
+     için varsayılan güçte çalışabilir. Ancak S3 Mini/SuperMini gibi küçük S3
+     klonlarında yine `WiFi.setTxPower(WIFI_POWER_8_5dBm)` veya `11dBm` önerilir.
+
+--------------------------------------------------------------------------------
+2. USB CDC SERİ PORT KİLİTLENME KORUMASI (PRİZDE ÇALIŞMA KURALI)
+--------------------------------------------------------------------------------
+ESP32-C3 ve ESP32-S3 dahili USB (Native USB CDC) kullanır. Eğer kart bilgisayara
+değil de normal bir telefon adaptörüne/prize takılıysa veya bilgisayarda Arduino
+Serial Monitor kapalıysa; kod içindeki `Serial.print()` komutları USB tamponu
+dolduğu için kartı tamamen dondurur (kitler).
+
+ÇÖZÜM (`setup()` başında zorunlu):
+```cpp
+Serial.begin(115200);
+Serial.setTxTimeoutMs(0); // IDE/PC kapalıyken Serial.print kartı ASLA dondurmasın!
+```
+
+--------------------------------------------------------------------------------
+3. KUSURSUZ HOTSPOT (SOFTAP) VE CAPTIVE PORTAL BAŞLATMA MİMARİSİ
+--------------------------------------------------------------------------------
+ESP32'de Hotspot (Ayar Modu) açarken ekstra karmaşık parametreler (`WIFI_OFF`
+beklemeleri, `setSleep`, özel kanal zorlamaları) Wi-Fi sürücüsünü bozar.
+En stabil çalışan, hem Android hem iPhone hem de Windows'un tek seferde
+bağlandığı "Waveshare Altın Standart" AP kodu şudur:
+
+```cpp
+const byte DNS_PORT = 53;
+IPAddress apIP(192, 168, 4, 1);
+
+void handleRedirect() {
+  server.sendHeader("Location", "http://192.168.4.1/", true);
+  server.send(302, "text/plain", "");
+}
+
+void startConfigPortal() {
+  inConfigMode = true;
+  updateStatusLed(); // Turuncu LED yansın!
+
+  WiFi.disconnect();
+  WiFi.mode(WIFI_AP);
+  
+  // ESP32-C3 İSE BU SATIR ZORUNLUDUR (S3'te de zararı yoktur, kararlılığı artırır):
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
+
+  String targetAp = ap_name; // NVS'den gelen özel yayın adı (Örn: "ODA-1")
+  targetAp.trim();
+  if (targetAp.length() == 0) {
+    targetAp = "ESP32-Device-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  }
+
+  WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+  WiFi.softAP(targetAp.c_str()); // Ekstra kanal/gizlilik parametresi VERME! Varsayılan en sağlıklısıdır.
+
+  dnsServer.start(DNS_PORT, "*", apIP);
+
+  server.on("/", HTTP_GET, handleRoot);
+  server.on("/save", HTTP_POST, handleSave);
+
+  // İşletim Sistemleri Captive Portal Otomatik Algılama Endpoint'leri
+  server.on("/generate_204", handleRedirect);        // Android
+  server.on("/fwlink", handleRedirect);              // Windows
+  server.on("/hotspot-detect.html", handleRedirect); // Apple iOS
+
+  server.onNotFound(handleRedirect);
+  server.begin();
+}
+```
+
+--------------------------------------------------------------------------------
+4. EV MODEMİNE (STA MODU) BAĞLANMA VE KOPMA YÖNETİMİ
+--------------------------------------------------------------------------------
+Wi-Fi bağlantısı kurulurken dikkat edilecek kurallar:
+1. `WiFi.mode(WIFI_STA);` çağrıldıktan hemen sonra C3 için `WiFi.setTxPower(WIFI_POWER_8_5dBm);`
+   çağrılmalıdır.
+2. Bağlanırken (20 saniye boyunca) kullanıcı BOOT butonuna basarsa beklemeden
+   doğrudan `startConfigPortal()` ile Ayar Moduna geçmelidir.
+3. 20 saniye içinde modeme bağlanamazsa kendi kendine AP açmak yerine (elektrik
+   kesintisinde modem geç açıldığı için cihaz AP modunda asılı kalmasın diye)
+   `ESP.restart()` ile kartı yeniden başlatıp modemi tekrar aramalıdır!
+
+```cpp
+void setup_wifi() {
+  if (wifi_ssid == "" || wifi_ssid == "***") {
+    startConfigPortal();
+    return;
+  }
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setTxPower(WIFI_POWER_8_5dBm); // C3 için zorunlu!
+  WiFi.begin(wifi_ssid.c_str(), wifi_password.c_str());
+
+  int timeout = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    // Bağlanırken BOOT butonuna basılırsa anında Ayar Modunu aç!
+    if (digitalRead(BOOT_PIN) == LOW) {
+      startConfigPortal();
+      while (digitalRead(BOOT_PIN) == LOW) { delay(10); }
+      return;
+    }
+
+    setRgbColor(0, 0, 100); // Mavi Blink
+    delay(250);
+    setRgbColor(0, 0, 0);
+    delay(250);
+    timeout++;
+
+    if (timeout > 40) { // 20 saniyede bağlanamazsa Reset at ve tekrar dene
+      setRgbColor(255, 0, 0);
+      delay(1000);
+      ESP.restart();
+    }
+  }
+
+  espClient.setInsecure(); // SSL/TLS (Port 8883 MQTT ve HTTPS Supabase) için şart!
+  updateStatusLed();
+}
+```
+
+--------------------------------------------------------------------------------
+5. LOOP() DÖNGÜSÜ SIRALAMA KURALI (ÇOK KRİTİK!)
+--------------------------------------------------------------------------------
+Cihaz Ayar Moduna (`inConfigMode = true`) girdiğinde, `loop()` içinde:
+- Asla tekrar BOOT butonu okunmamalıdır.
+- Asla `if (WiFi.status() != WL_CONNECTED)` kontrolüne düşmemelidir (yoksa AP
+  modundayken STA bağlı değil diye 30 saniye sonra kart kendi kendine reset atar
+  ve AP yayınını kapatır!).
+
+Doğru `loop()` Sıralaması:
+```cpp
+void loop() {
+  // 1. ÖNCE AYAR MODU KONTROLÜ (Ayar modundaysa aşağıya ASLA inme!)
+  if (inConfigMode) {
+    dnsServer.processNextRequest();
+    server.handleClient();
+    return;
+  }
+
+  // 2. FİZİKSEL BOOT BUTONU KONTROLÜ (3 Saniye Basılı Tutma)
+  if (digitalRead(BOOT_PIN) == LOW) {
+    unsigned long pressStart = millis();
+    while (digitalRead(BOOT_PIN) == LOW) {
+      if (millis() - pressStart >= 3000) {
+        startConfigPortal();
+        while (digitalRead(BOOT_PIN) == LOW) { delay(10); }
+        return; // Döngüden çık, bir sonraki turda 1. maddeden devam et!
+      }
+      delay(50);
+    }
+  }
+
+  // 3. NORMAL WI-FI VE MQTT DÖNGÜSÜ
+  if (WiFi.status() != WL_CONNECTED) {
+    static unsigned long wifiLostTime = 0;
+    if (wifiLostTime == 0) wifiLostTime = millis();
+    if (millis() - wifiLostTime > 30000) {
+      delay(1000);
+      ESP.restart(); // 30 sn boyunca Wi-Fi geri gelmezse temiz reset at
+    }
+  } else {
+    if (!mqttClient.connected()) {
+      reconnect_mqtt();
+    }
+    mqttClient.loop();
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+6. WS2812 RGB DURUM LEDİ STANDART RENK TABLOSU
+--------------------------------------------------------------------------------
+Harici kütüphane (Adafruit_NeoPixel / FastLED) kullanmaya GEREK YOKTUR. ESP32
+çekirdeğinde hazır bulunan `neopixelWrite(pin, g, r, b)` fonksiyonu sıfır RAM
+tüketimiyle çalışır (Not: WS2812'de Red ve Green kanalları ters olduğu için
+ilk parametre `g`, ikinci parametre `r` olarak verilir).
+
+Standart Renk Kodlarımız:
+- 🔵 MAVİ YANIP SÖNME `(0, 0, 100)` : Wi-Fi ağına bağlanıyor (Arama modu)
+- 🟠 TURUNCU SABİT    `(255, 120, 0)`: Ayar Modu (Hotspot / Web Paneli açık)
+- 🟢 YEŞİL SABİT      `(0, 150, 0)`  : Wi-Fi ve MQTT bağlı, sistem boşta / hazır
+- 🟣 MOR SABİT        `(200, 0, 200)`: Rölelerden en az biri AÇIK (Aktif yük)
+- 🔴 KIRMIZI FLAŞ     `(255, 0, 0)`  : Bağlantı hatası / Resetleniyor
+
+--------------------------------------------------------------------------------
+7. CHECKBOX VE NVS (PREFERENCES) KAYIT TUZAĞI
+--------------------------------------------------------------------------------
+HTML formlarında `<input type="checkbox" name="sb_en">` işaretli değilse tarayıcı
+POST isteğinde `sb_en` parametresini hiç göndermez.
+- Bu yüzden `handleSave()` içinde:
+  `supabase_enabled = server.hasArg("sb_en");` kullanılır.
+- Web panelinde yeni bir ayar kaydederken Supabase veya Bildirim Ledi kutucuğunun
+  işaretli olduğundan emin olunmalıdır.
+================================================================================

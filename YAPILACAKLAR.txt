@@ -1,0 +1,28 @@
+================================================================================
+              ESP32 SMARTSENSOR & RELAY - YAPILACAKLAR LİSTESİ (TODO)
+================================================================================
+
+[ ] 1. HOME ASSISTANT MQTT AUTO-DISCOVERY ENTEGRASYONU
+    - Cihaz MQTT'ye bağlandığında (reconnect_mqtt içinde), kullanıcının Web
+      Panelden girdiği "Cihaz Key / Cihaz Adı" (örn: ODA-1, SALON, sensor-001)
+      kimliğini baz alarak Home Assistant'a otomatik tanıtım (discovery)
+      paketleri gönderecek:
+      * Sıcaklık Sensörü : homeassistant/sensor/{cihaz_id}_temp/config
+      * Nem Sensörü      : homeassistant/sensor/{cihaz_id}_hum/config
+      * Röle / Termostat : homeassistant/switch/{cihaz_id}_relay/config
+    - Böylece Home Assistant tarafında configuration.yaml dosyasına hiçbir kod
+      yazmadan, cihaz fişe takıldığı anda verilen ID ile otomatik algılanacak.
+    - Web paneline "Home Assistant Otomatik Tanıma (Auto-Discovery)" aç/kapa
+      checkbox'ı eklenecek.
+
+[ ] 2. MERKEZİ İZLEME VE KONTROL PANELİ (DASHBOARD)
+    - Tüm cihazların (ESP32-C3 Sensörler + Waveshare 6CH Röle Kartları) tek
+      ekrandan canlı izlenebileceği ve kontrol edilebileceği arayüz (Web veya
+      .NET C# Masaüstü / Mobil uyumlu panel).
+    - Cihazların çevrimiçi/çevrimdışı (Online/Offline LWT) durum takibi.
+
+[ ] 3. SUPABASE & MQTT SENKRON TEST KONTROLÜ
+    - ESP32-C3 üzerinde yapılan SSL RAM paylaşımı (MQTT + Supabase sıralı
+      gönderim) güncellemesinin uzun süreli (24 saatlik) adaptör testinin
+      doğrulanması.
+================================================================================

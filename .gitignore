@@ -1,0 +1,18 @@
+# Don't commit sensitive credentials to public GitHub
+password.h
+*/password.h
+*password*.h
+!password.h.example
+!*/password.h.example
+
+# Windows / Browser shortcuts & temp files
+*.url
+Thumbs.db
+[Dd]esktop.ini
+
+# IDE & Build folders
+.vscode/
+.pio/
+*.bin
+*.elf
+*.hex
