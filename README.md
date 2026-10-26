@@ -1,4 +1,5 @@
-# ESP32-C3 & S3 Dual Telemetry (MQTT & Supabase) Industrial IoT Suite v1.0
+# ESP32 Canlı IoT İklim & Telemetri İstasyonu v1.0
+### Production-Grade Dual-Cloud (MQTTS & Supabase) IoT Telemetry Station
 
 🌐 [English](#english-version) | 🇹🇷 [Türkçe Versiyon](#türkçe-versiyon)
 
@@ -6,7 +7,7 @@
 
 ## English Version
 
-A production-grade, highly resilient **Dual-Cloud IoT Telemetry & Smart Automation Station (v1.0)** developed in C++ (Arduino/ESP-IDF framework) for **ESP32-C3 (RISC-V)** and **Waveshare ESP32-S3 (6-Channel Isolated Relay & RS-485)** hardware. Engineered to stream non-blocking environmental telemetry (DHT11 Temperature & Humidity) simultaneously to a **Secure MQTT Broker (MQTTS Port 8883 / TLS)** and **Supabase PostgreSQL Cloud Database (HTTPS REST)** with dynamic Wi-Fi Captive Portal configuration, live hardware diagnostics, and deep crash-prevention architecture.
+A production-grade, highly resilient **Dual-Cloud IoT Climate & Telemetry Station (v1.0)** developed in C++ (Arduino/ESP-IDF framework) for **ESP32-C3 (RISC-V)** hardware. Engineered to stream non-blocking environmental telemetry (DHT11 Temperature & Humidity) simultaneously to a **Secure MQTT Broker (MQTTS Port 8883 / TLS)** and **Supabase PostgreSQL Cloud Database (HTTPS REST)** with dynamic Wi-Fi Captive Portal configuration, live hardware diagnostics, and deep crash-prevention architecture.
 
 Tested, benchmarked, and verified **17+ hours continuously with 740+ telemetry cycles and 0.00% error rate**.
 
@@ -37,7 +38,7 @@ Tested, benchmarked, and verified **17+ hours continuously with 740+ telemetry c
 
 ## Türkçe Versiyon
 
-**ESP32-C3 (RISC-V)** ve **Waveshare ESP32-S3 (6 Kanallı İzole Röle & RS485)** donanımları üzerinde geliştirilmiş; zorlu saha şartlarında sıfır kesintiyle çalışan, **Çift Bulutlu (Dual-Cloud: MQTTS TLS + Supabase HTTPS REST) Endüstriyel IoT İklim & Telemetri İstasyonu v1.0**.
+**ESP32-C3 (RISC-V)** donanımı üzerinde geliştirilmiş; zorlu saha şartlarında sıfır kesintiyle çalışan, **Çift Bulutlu (Dual-Cloud: MQTTS TLS + Supabase HTTPS REST) Canlı IoT İklim & Telemetri İstasyonu v1.0**.
 
 Bu proje; basit bir sensör okuma uygulamasının ötesinde, gömülü sistem geliştiricilerinin ESP32 ailesinde sıklıkla karşılaştığı **SSL bellek tükenmesi, modem kaynaklı uyku kopmaları, USB CDC kilitlenmeleri ve dinamik yapılandırma** problemlerini kökten çözen referans bir mühendislik mimarisidir.
 
@@ -116,7 +117,7 @@ Cihaz tarafından `erhev/sensor-001/state` konusuna yayınlanan optimize edilmi�
 ![IoT Station Full Report](https://raw.githubusercontent.com/erhanaltinkopru/esp32-c3-mqtt-supabase-iot/main/screenshots/iot_station_full_report.png)
 
 ### 4. Fiziksel Donanım ve Devre Kurulumu (Hardware Breadboard Setup)
-*ESP32-C3 SuperMini, DHT11 sensör ve izole tetikleme devresinin test masası kurulumu:*
+*ESP32-C3 SuperMini, DHT11 sensör ve test masası kurulumu:*
 ![ESP32-C3 Hardware Setup](https://raw.githubusercontent.com/erhanaltinkopru/esp32-c3-mqtt-supabase-iot/main/screenshots/esp32_c3_hardware_breadboard.jpg)
 
 ---

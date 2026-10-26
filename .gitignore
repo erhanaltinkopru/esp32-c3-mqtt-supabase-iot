@@ -5,6 +5,10 @@ password.h
 !password.h.example
 !*/password.h.example
 
+# Separate projects (will have their own repo)
+Waveshare_Relay6CH/
+Wemos_Mqtt/
+
 # Windows / Browser shortcuts & temp files
 *.url
 Thumbs.db
