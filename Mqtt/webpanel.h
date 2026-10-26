@@ -12,7 +12,7 @@ inline String getWebPanelHtml(
   const String& mqtt_device_key, const String& mqtt_device_pass, const String& mqtt_topic,
   bool supabase_enabled, const String& supabase_url, const String& supabase_anon_key,
   int relay_mode, int relay_pin, float target_temp, float hysteresis,
-  bool led_enabled, int led_pin,
+  bool led_enabled, int led_pin, int led_order,
   int mqtt_interval, int supabase_interval, float temp_threshold, float hum_threshold
 ) {
   String html = R"rawliteral(
@@ -235,7 +235,16 @@ inline String getWebPanelHtml(
         <div class="form-group">
           <label>WS2812 DIN Pini (GPIO)</label>
           <input type="number" name="led_pin" value=")rawliteral" + String(led_pin) + R"rawliteral(">
-          <small style="color: var(--muted); font-size: 11px;">Mavi: Wi-Fi Aranıyor | Turuncu: Ayar Modu | Yeşil: Boşta/Bağlı | Mor: Röle Açık</small>
+        </div>
+        <div class="form-group">
+          <label>LED Renk Sırası (Çip / Şerit Tipi)</label>
+          <select name="led_ord">
+            <option value="0" )rawliteral" + (led_order == 0 ? "selected" : "") + R"rawliteral(>GRB (Çoğu WS2812B Şerit LED - Varsayılan)</option>
+            <option value="1" )rawliteral" + (led_order == 1 ? "selected" : "") + R"rawliteral(>RGB (WS2811 / Standart RGB Şerit)</option>
+            <option value="2" )rawliteral" + (led_order == 2 ? "selected" : "") + R"rawliteral(>BRG (Bazı 12V WS2811 Şeritler)</option>
+            <option value="3" )rawliteral" + (led_order == 3 ? "selected" : "") + R"rawliteral(>BGR</option>
+          </select>
+          <small style="color: var(--muted); font-size: 11px;">Renkler yanlış yanıyorsa (ör. yeşil yerine turkuaz/mavi) buradan şeridinize uygun çip sırasını seçiniz.</small>
         </div>
       </div>
 

@@ -53,6 +53,7 @@ float  hysteresis;
 
 bool   led_enabled;     // WS2812 Bildirim Ledi Açık/Kapalı
 int    led_pin;         // WS2812 GPIO Pini
+int    led_order;       // 0: GRB, 1: RGB, 2: BRG, 3: BGR
 
 int    mqtt_interval;       // saniye
 int    supabase_interval;   // dakika
@@ -141,8 +142,21 @@ float currentHum = 0.0;
 // --- RGB LED (WS2812) BİLDİRİM FONKSİYONU ---
 void setRgbColor(uint8_t r, uint8_t g, uint8_t b) {
   if (!led_enabled || led_pin < 0) return;
-  // Waveshare / WS2812 mantığı: G, R, B
-  neopixelWrite(led_pin, g, r, b);
+  switch (led_order) {
+    case 1: // RGB (WS2811 / Standart RGB Şerit)
+      neopixelWrite(led_pin, r, g, b);
+      break;
+    case 2: // BRG
+      neopixelWrite(led_pin, b, r, g);
+      break;
+    case 3: // BGR
+      neopixelWrite(led_pin, b, g, r);
+      break;
+    case 0: // GRB (Çoğu WS2812B Şerit LED - Varsayılan)
+    default:
+      neopixelWrite(led_pin, g, r, b);
+      break;
+  }
 }
 
 void updateStatusLed() {
@@ -199,6 +213,7 @@ void loadSettings() {
 
   led_enabled      = prefs.getBool("led_en", DEFAULT_LED_ENABLE);
   led_pin          = prefs.getInt("led_pin", DEFAULT_LED_PIN);
+  led_order        = prefs.getInt("led_ord", DEFAULT_LED_ORDER);
 
   mqtt_interval    = prefs.getInt("int_mq", DEFAULT_MQTT_INTERVAL);
   supabase_interval= prefs.getInt("int_sb", DEFAULT_SUPABASE_INTERVAL);
@@ -238,6 +253,7 @@ void saveSettings() {
 
   prefs.putBool("led_en", led_enabled);
   prefs.putInt("led_pin", led_pin);
+  prefs.putInt("led_ord", led_order);
 
   prefs.putInt("int_mq", mqtt_interval);
   prefs.putInt("int_sb", supabase_interval);
@@ -295,7 +311,7 @@ void handleRoot() {
     mqtt_device_key, mqtt_device_pass, mqtt_topic,
     supabase_enabled, supabase_url, supabase_anon_key,
     relay_mode, relay_pin, target_temp, hysteresis,
-    led_enabled, led_pin,
+    led_enabled, led_pin, led_order,
     mqtt_interval, supabase_interval, temp_threshold, hum_threshold
   );
 
@@ -334,6 +350,7 @@ void handleSave() {
 
   led_enabled = server.hasArg("led_en");
   if (server.hasArg("led_pin")) led_pin = server.arg("led_pin").toInt();
+  if (server.hasArg("led_ord")) led_order = server.arg("led_ord").toInt();
 
   if (server.hasArg("int_mq")) mqtt_interval = server.arg("int_mq").toInt();
   if (server.hasArg("int_sb")) supabase_interval = server.arg("int_sb").toInt();
